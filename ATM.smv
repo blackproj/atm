@@ -1,0 +1,48 @@
+MODULE main
+	VAR
+		card_in    :  boolean;
+		enter_pin  :  boolean;
+		state      :  {correct_pin, wrong_pin};
+		money      :  {funds_OK, funds_KO};
+	 	action     :  {ask_amount, print_balance, abort};
+		access     :  {WELCOME, GRANT, DENY};
+	ASSIGN
+		init(access) := WELCOME;
+		next(access) := case
+		 	card_in & enter_pin & state = correct_pin
+                     & money = funds_OK 
+					  & action = ask_amount : GRANT;
+
+			card_in & enter_pin & state = correct_pin
+					 & (money = funds_OK | money = funds_KO)
+					  & action = print_balance : GRANT;
+
+			card_in & enter_pin & state = correct_pin
+					 & (money = funds_OK | money = funds_KO)
+					  & action = abort : GRANT;
+		TRUE : DENY;
+                        esac;
+
+		next(card_in)    := card_in;
+		next(enter_pin)  := enter_pin;
+		next(state)      := state;
+		next(money)      := money;
+		next(action)     := action;
+
+SPEC AG ( (!card_in) -> AF(action = ask_amount) );
+
+SPEC AG ( (card_in = TRUE & enter_pin = TRUE & state = correct_pin & money = funds_OK & action = ask_amount) -> AF (access = GRANT) );
+
+SPEC AG ( (card_in = TRUE & enter_pin = TRUE & state = wrong_pin & money = funds_OK & action = ask_amount) -> AX (access = GRANT) );
+
+SPEC AG ( (card_in = TRUE & enter_pin = FALSE) -> AF (access = DENY) );
+
+SPEC EG ( (card_in = TRUE & enter_pin = TRUE & state = correct_pin & action = print_balance) -> AX (access = DENY) );
+
+SPEC EG ( ( card_in = TRUE & enter_pin = TRUE & state = wrong_pin & action = abort) -> EF (access = GRANT) );
+
+SPEC AG ( (card_in = TRUE & enter_pin = TRUE & state = correct_pin & money = funds_KO & action = ask_amount) -> EF (access = GRANT) );
+
+SPEC AG ( (card_in = TRUE & !enter_pin = TRUE & (state = correct_pin | state = wrong_pin) & money = funds_OK & action = ask_amount) -> AF (access = DENY) );
+
+SPEC EG ( (card_in = TRUE & !enter_pin = TRUE & (state = correct_pin | state = wrong_pin) & (money = funds_OK | money = funds_KO) & action = print_balance) -> AX (access = DENY) );
